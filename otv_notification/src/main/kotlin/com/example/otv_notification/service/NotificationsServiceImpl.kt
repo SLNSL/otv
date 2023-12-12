@@ -1,16 +1,16 @@
 package com.example.otv_notification.service
 
 import com.example.otv_notification.entity.Notification
+import com.example.otv_notification.entity.Para
 import com.example.otv_notification.repository.NotificationRepository
 import com.example.otv_notification.repository.ParaRepository
 import com.example.otv_notification.repository.SubjectTeacherGroupRepository
-import com.example.otv_notification.service.abstraction.ScheduleService
+import com.example.otv_notification.service.abstraction.NotificationsService
 import jakarta.annotation.PostConstruct
 
 import lombok.extern.slf4j.Slf4j
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
-import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import java.time.LocalTime
@@ -18,32 +18,42 @@ import java.time.LocalTime
 @Component
 @Slf4j
 @Transactional
-class ScheduleServiceImpl(
+class NotificationsServiceImpl(
     private val subjectTeacherGroupRepository: SubjectTeacherGroupRepository,
     private val paraRepository: ParaRepository,
     private val notificationRepository: NotificationRepository,
     private val telegramSender: TelegramSender
-) : ScheduleService {
+) : NotificationsService {
 
     @PostConstruct
     fun init() {
 
     }
 
-    //    @Scheduled(cron = "0 0 8 * * *")
-    @Scheduled(fixedRate = 10000)
-    // TODO: мб сделать многопоточкой
-    override fun schedule() {
+    @Scheduled(cron = "0 0 8 * * *")
+    override fun schedule(): Int {
         println("Началась выгрузка и отправка уведомлений: ${LocalTime.now()}")
         val notificationList = notificationRepository.findByNoticeDate(LocalDate.now())
         println("Выгружено ${notificationList.size} уведомлений")
         notificationList.forEach {
             telegramSender.send(it)
         }
-        notificationRepository.deleteAll()
+        notificationRepository.deleteAll(notificationList)
+        return notificationList.size
     }
 
-    override fun createSchedule(noticePeriod: String, group: String, chatId: String) {
+    override fun nowSchedule(): Int {
+        println("Началась срочная выгрузка и отправка всех уведомлений: ${LocalTime.now()}")
+        val notificationList = notificationRepository.findAll()
+        println("Выгружено ${notificationList.size} уведомлений")
+        notificationList.forEach {
+            telegramSender.send(it)
+        }
+        notificationRepository.deleteAll(notificationList)
+        return notificationList.size
+    }
+
+    override fun createNotifications(noticePeriod: String, group: String, chatId: String) {
         val subjTeacherGroupList = subjectTeacherGroupRepository.findAllByGroupName(group).toSet()
         val classList = paraRepository.findBySubjectTeacherIn(subjTeacherGroupList)
         val notificationList = mutableListOf<Notification>()
@@ -59,12 +69,39 @@ class ScheduleServiceImpl(
         notificationRepository.saveAll(notificationList)
     }
 
-    override fun changeSchedule(noticePeriod: String, group: String, chatId: String) {
-        deleteSchedule(chatId)
-        createSchedule(noticePeriod, group, chatId)
+    override fun changeNotifications(noticePeriod: String, group: String, chatId: String) {
+        deleteNotifications(chatId)
+        createNotifications(noticePeriod, group, chatId)
     }
 
-    override fun deleteSchedule(chatId: String) {
+    override fun refreshNotifications(
+        group: String,
+        newParas: List<Para>,
+        groupChatIdsToNoticePeriod: List<Pair<Long?, Int?>>
+    ): Int {
+
+        val newNotifications = mutableListOf<Notification>()
+
+        groupChatIdsToNoticePeriod.forEach {
+            val chatId = it.first
+            val noticePeriod = it.second
+
+            newParas.forEach { para ->
+                val notification = Notification()
+                notification.chatId = chatId?.toString()
+                notification.noticePeriod = noticePeriod?.toString()
+
+                notification.noticeDate = para.date!!.toLocalDate().plusDays(noticePeriod!!.toLong())
+                notification.subjectTeacher = para.subjectTeacher
+
+                newNotifications.add(notification)
+            }
+        }
+
+        return notificationRepository.saveAll(newNotifications).size
+    }
+
+    override fun deleteNotifications(chatId: String) {
         notificationRepository.deleteAllByChatId(chatId)
     }
 }

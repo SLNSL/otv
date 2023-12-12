@@ -10,6 +10,7 @@ import com.example.otv_processing.repository.StudentRepository
 import com.example.otv_processing.service.abstraction.StudentService
 import com.example.otv_processing.service.converter.MessageTextConverter.Companion.convertNotificationToBoolean
 import com.example.otv_processing.service.converter.MessageTextConverter.Companion.convertPeriodMessageToNumber
+import com.example.otv_processing.util.MessageResolveUtil.Companion.isCreateParaMessage
 import com.example.otv_processing.util.MessageResolveUtil.Companion.isGroupSelectMessage
 import com.example.otv_processing.util.MessageResolveUtil.Companion.isNotificationsSelectMessage
 import com.example.otv_processing.util.MessageResolveUtil.Companion.isPeriodSelectMessage
@@ -22,15 +23,26 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 class TextHandler(
     private val groupRepository: GroupRepository,
     private val studentService: StudentService,
-    private val periodRepository: PeriodRepository
+    private val periodRepository: PeriodRepository,
+    private val studentRepository: StudentRepository
 ) {
-    private val queueSender: QueueSender = QueueSender()
 
-    fun processNotCommand(updateDTO: UpdateDTO, student: Student, preMessage: String? = ""): SendMessage {
+    private val queueSender: QueueSender = QueueSender()
+    fun processNotCommand(updateDTO: UpdateDTO, student: Student, preMessage: String? = ""): SendMessage? {
         return when {
-            isGroupSelectMessage(updateDTO.message, student.lastCommand) -> processGroupContained(updateDTO, student)
-            isPeriodSelectMessage(updateDTO.message, student.lastCommand) -> processPeriodContained(updateDTO, student)
-            isNotificationsSelectMessage(updateDTO.message, student.lastCommand) -> processNotificationContained(updateDTO, student)
+            isGroupSelectMessage(updateDTO.message, student.lastCommand) ->
+                processGroupContained(updateDTO, student)
+
+            isPeriodSelectMessage(updateDTO.message, student.lastCommand) ->
+                processPeriodContained(updateDTO, student)
+
+            isNotificationsSelectMessage(updateDTO.message, student.lastCommand) ->
+                processNotificationContained(updateDTO, student)
+
+            isCreateParaMessage(updateDTO.message, student.lastCommand) -> {
+                processParaContained(updateDTO, student); null
+            }
+
             else -> processTrash(updateDTO, student, preMessage)
         }
     }
@@ -45,7 +57,7 @@ class TextHandler(
 
             return SendMessageBuilder.builder()
                 .message("Теперь ваша группа - ${group.name}")
-                .replyMarkup(ReplyMenuUtil.mainMenu())
+                .replyMarkup(ReplyMenuUtil.mainMenu(student.telegramName!!))
                 .build(updateDTO.chatId)
 
         } catch (e: MessageProcessException) {
@@ -70,7 +82,7 @@ class TextHandler(
 
             return SendMessageBuilder.builder()
                 .message("Уведомления о дне сдаче будут приходить за ${noticePeriod.daysCount} дней до сдачи")
-                .replyMarkup(ReplyMenuUtil.mainMenu())
+                .replyMarkup(ReplyMenuUtil.mainMenu(student.telegramName!!))
                 .build(updateDTO.chatId)
 
         } catch (e: MessageProcessException) {
@@ -80,6 +92,20 @@ class TextHandler(
                 .replyMarkup(ReplyMenuUtil.periodSelector(allPeriods))
                 .build(updateDTO.chatId)
         }
+    }
+
+    fun processParaContained(updateDTO: UpdateDTO, student: Student) {
+
+        val studentsChatIdFromThisGroup = studentRepository.findAllByGroupAndIsNotificationEnabled(
+                student.group!!, true
+            ).map { it.telegramChatId to it.noticePeriod!!.daysCount }
+
+        queueSender.sendNewParas(
+            updateDTO.chatId.toString(),
+            updateDTO.message,
+            student.group!!.name!!,
+            studentsChatIdFromThisGroup
+        )
     }
 
     fun processNotificationContained(updateDTO: UpdateDTO, student: Student): SendMessage {
@@ -104,13 +130,13 @@ class TextHandler(
 
             return SendMessageBuilder.builder()
                 .message("Теперь уведомления ${if (notificationChoice) "включены" else "отключены"}")
-                .replyMarkup(ReplyMenuUtil.mainMenu())
+                .replyMarkup(ReplyMenuUtil.mainMenu(student.telegramName!!))
                 .build(updateDTO.chatId)
 
         } catch (e: MessageProcessException) {
             return SendMessageBuilder.builder()
                 .message(e.message!!)
-                .replyMarkup(ReplyMenuUtil.mainMenu())
+                .replyMarkup(ReplyMenuUtil.mainMenu(student.telegramName!!))
                 .build(updateDTO.chatId)
         }
     }
@@ -141,10 +167,9 @@ class TextHandler(
 
         return SendMessageBuilder.builder()
             .message(message)
-            .replyMarkup(ReplyMenuUtil.mainMenu())
+            .replyMarkup(ReplyMenuUtil.mainMenu(student.telegramName!!))
             .build(updateDTO.chatId)
     }
-
 
 
 }

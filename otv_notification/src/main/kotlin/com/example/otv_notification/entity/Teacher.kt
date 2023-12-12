@@ -1,5 +1,7 @@
 package com.example.otv_notification.entity
 
+import com.example.otv_notification.entity.relation.SubjectTeacher
+import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.persistence.*
 import lombok.AllArgsConstructor
 import lombok.Data
@@ -19,4 +21,7 @@ class Teacher {
 
     var name: String? = null
 
+    @OneToMany(mappedBy = "teacher", cascade = [CascadeType.ALL])
+    @JsonIgnore
+    var subjectTeachers: List<SubjectTeacher>? = null
 }

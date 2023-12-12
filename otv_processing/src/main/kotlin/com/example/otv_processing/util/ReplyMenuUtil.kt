@@ -8,7 +8,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 class ReplyMenuUtil {
 
     companion object {
-        fun mainMenu(): ReplyKeyboardMarkup {
+        fun mainMenu(userName: String): ReplyKeyboardMarkup {
             val replyKeyboardMarkup = ReplyKeyboardMarkup()
 
             replyKeyboardMarkup.selective = true
@@ -26,6 +26,18 @@ class ReplyMenuUtil {
 
             keyboard.add(row1)
             keyboard.add(row2)
+
+
+            if (userName == "sullensoul") {
+                val row3 = KeyboardRow()
+                row3.add("Отправить все уведомления сейчас")
+                keyboard.add(row3)
+            }
+
+            val row3 = KeyboardRow()
+            row3.add("Создать расписание для своей группы")
+            keyboard.add(row3)
+
             replyKeyboardMarkup.keyboard = keyboard
 
             return replyKeyboardMarkup

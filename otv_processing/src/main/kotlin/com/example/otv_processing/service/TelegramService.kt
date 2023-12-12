@@ -28,7 +28,7 @@ class TelegramService(
     override fun onUpdateReceived(update: Update) {
         val sendMessage = messageProcessService.process(update)
         try {
-            execute(sendMessage)
+            if (sendMessage != null) execute(sendMessage)
         } catch (e: TelegramApiException) {
             e.printStackTrace()
         }

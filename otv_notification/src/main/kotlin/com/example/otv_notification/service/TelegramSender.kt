@@ -45,4 +45,11 @@ class TelegramSender(
         execute(sendMessage)
     }
 
+    fun send(chatId: String, message: String) {
+        val sendMessage = SendMessage()
+        sendMessage.chatId = chatId
+        sendMessage.text = message
+        execute(sendMessage)
+    }
+
 }

@@ -8,7 +8,9 @@ import com.example.otv_processing.repository.StudentRepository
 import com.example.otv_processing.service.abstraction.MessageProcessService
 import com.example.otv_processing.service.handler.CommandHandler
 import com.example.otv_processing.service.handler.TextHandler
+import com.example.otv_processing.util.MessageResolveUtil.Companion.isCreateParaCommand
 import com.example.otv_processing.util.MessageResolveUtil.Companion.isGroupCommand
+import com.example.otv_processing.util.MessageResolveUtil.Companion.isNoticeNowCommand
 import com.example.otv_processing.util.MessageResolveUtil.Companion.isNotificationsCommand
 import com.example.otv_processing.util.MessageResolveUtil.Companion.isPeriodCommand
 import com.example.otv_processing.util.MessageResolveUtil.Companion.isStartCommand
@@ -27,7 +29,7 @@ class MessageProcessServiceImpl(
 ) : MessageProcessService {
 
     @Transactional
-    override fun process(update: Update): SendMessage {
+    override fun process(update: Update): SendMessage? {
         val updateDTO = UpdateDTO(
             message = update.message.text,
             userTelegramName = update.message.from.userName,
@@ -37,13 +39,13 @@ class MessageProcessServiceImpl(
         val sendMessage = try {
             resolveAndProcess(updateDTO)
         } catch (e: MessageProcessException) {
-            SendMessageBuilder.replyWithExceptionMessage(e, updateDTO.chatId)
+            SendMessageBuilder.replyWithExceptionMessage(e, updateDTO)
         }
 
         return sendMessage
     }
 
-    private fun resolveAndProcess(updateDTO: UpdateDTO): SendMessage {
+    private fun resolveAndProcess(updateDTO: UpdateDTO): SendMessage? {
         var student = Student()
 
         if (!isStartCommand(updateDTO.message)) {
@@ -59,6 +61,8 @@ class MessageProcessServiceImpl(
             isGroupCommand(updateDTO.message) -> commandProcessor.processGroupCommand(updateDTO, student)
             isPeriodCommand(updateDTO.message) -> commandProcessor.processPeriodCommand(updateDTO, student)
             isNotificationsCommand(updateDTO.message) -> commandProcessor.processNotificationCommand(updateDTO, student)
+            isCreateParaCommand(updateDTO.message) -> commandProcessor.processCreateParaCommand(updateDTO, student)
+            isNoticeNowCommand(updateDTO.message) -> commandProcessor.processNoticeNow(updateDTO, student)
 
             else -> {
                 needUpdateLastCommand = false

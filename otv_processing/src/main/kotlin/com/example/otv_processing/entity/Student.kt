@@ -29,4 +29,6 @@ class Student {
     var lastCommand: String? = null
 
     var isNotificationEnabled: Boolean = false
+
+    var isHeadman: Boolean = false
 }

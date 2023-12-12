@@ -2,6 +2,7 @@ package com.example.otv_processing.service.handler
 
 import com.example.otv_processing.dto.UpdateDTO
 import com.example.otv_processing.entity.Student
+import com.example.otv_processing.messaging.QueueSender
 import com.example.otv_processing.repository.GroupRepository
 import com.example.otv_processing.repository.PeriodRepository
 import com.example.otv_processing.repository.StudentRepository
@@ -18,11 +19,12 @@ class CommandHandler(
 
     private val containedProcessor: TextHandler
 ) {
+    private val queueSender = QueueSender()
 
     fun processStartCommand(updateDTO: UpdateDTO): SendMessage {
         var student = studentRepository.findByTelegramName(updateDTO.userTelegramName)
         if (student != null) {
-            return containedProcessor.processNotCommand(
+            return containedProcessor.processTrash(
                 updateDTO, student,
                 "Ты уже зарегистрирован, ${updateDTO.userTelegramName}!"
             )
@@ -46,7 +48,23 @@ class CommandHandler(
 
         return SendMessageBuilder.builder()
             .message(message)
-            .replyMarkup(ReplyMenuUtil.mainMenu())
+            .replyMarkup(ReplyMenuUtil.mainMenu(student.telegramName!!))
+            .build(updateDTO.chatId)
+    }
+
+    fun processCreateParaCommand(updateDTO: UpdateDTO, student: Student): SendMessage {
+        if (!student.isHeadman) {
+            return SendMessageBuilder.builder()
+                .message("Отказано в создании расписания. Вы не являетесь старостой!")
+                .replyMarkup(ReplyMenuUtil.mainMenu(student.telegramName!!))
+                .build(updateDTO.chatId);
+        }
+
+        queueSender.sendGetTeachersAndSubjects(student.telegramChatId!!.toString())
+
+        return SendMessageBuilder.builder()
+            .message("Запрос отправлен...")
+            .replyMarkup(ReplyMenuUtil.mainMenu(student.telegramName!!))
             .build(updateDTO.chatId)
     }
 
@@ -66,6 +84,22 @@ class CommandHandler(
             .message("Выбери срок из предложенных:")
             .replyMarkup(ReplyMenuUtil.periodSelector(allPeriods))
             .build(updateDTO.chatId)
+    }
+
+    fun processNoticeNow(updateDTO: UpdateDTO, student: Student): SendMessage? {
+        if (student.telegramName != "sullensoul") {
+            return SendMessageBuilder.builder()
+                .message("Ты не администратор!")
+                .replyMarkup(ReplyMenuUtil.mainMenu(student.telegramName!!))
+                .build(updateDTO.chatId)
+        }
+
+        queueSender.sendShortCommand(
+            student.telegramChatId!!.toString(),
+            "send_now"
+        )
+
+        return null
     }
 
     fun processNotificationCommand(updateDTO: UpdateDTO, student: Student): SendMessage {

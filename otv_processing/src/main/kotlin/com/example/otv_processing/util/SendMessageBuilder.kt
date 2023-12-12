@@ -1,5 +1,6 @@
 package com.example.otv_processing.util
 
+import com.example.otv_processing.dto.UpdateDTO
 import com.example.otv_processing.exception.MessageProcessException
 import lombok.experimental.UtilityClass
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
@@ -11,11 +12,11 @@ class SendMessageBuilder {
     companion object {
         fun builder() = SendMessageBuilder()
 
-        fun replyWithExceptionMessage(e: MessageProcessException, chatId: Long): SendMessage {
+        fun replyWithExceptionMessage(e: MessageProcessException, updateDTO: UpdateDTO): SendMessage {
             return SendMessageBuilder.builder()
                 .message(e.message!!)
-                .replyMarkup(ReplyMenuUtil.mainMenu())
-                .build(chatId)
+                .replyMarkup(ReplyMenuUtil.mainMenu(updateDTO.userTelegramName))
+                .build(updateDTO.chatId)
         }
     }
 
