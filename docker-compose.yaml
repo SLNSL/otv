@@ -1,0 +1,28 @@
+version: '3.5'
+
+services:
+  otv_processing_db:
+    container_name: otv_processing_db
+    ports:
+      - "8321:5432"
+    environment:
+      POSTGRES_PASSWORD: sllnsl
+      POSTGRES_USER: sllnsl
+    image: 'postgres:14.3-alpine'
+    volumes:
+      - otv_processing_volume:/var/lib/postgresql/data
+  
+  otv_notification_db:
+    container_name: otv_notification_db
+    ports:
+      - "8322:5432"
+    environment:
+      POSTGRES_PASSWORD: sllnsl
+      POSTGRES_USER: sllnsl
+    image: 'postgres:14.3-alpine'
+    volumes:
+      - otv_notification_volume:/var/lib/postgresql/data
+
+volumes:
+  otv_processing_volume:
+  otv_notification_volume:

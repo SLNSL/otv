@@ -1,0 +1,19 @@
+
+bot:
+  name: Deadline Bot
+  token: 6761629168:AAHOyhJ2IdSuM2yA7kn6POzJ9clByVMl1M8
+
+spring:
+  datasource:
+    url: jdbc:postgresql://rc1b-hf1qtr3wsoy3h498.mdb.yandexcloud.net:6432/otv_processing_db
+    username: sllnsl
+    password: nnik1320
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql:
+          true:
