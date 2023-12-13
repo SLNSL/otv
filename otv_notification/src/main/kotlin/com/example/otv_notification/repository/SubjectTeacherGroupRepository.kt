@@ -6,5 +6,6 @@ import org.springframework.stereotype.Repository
 
 @Repository
 interface SubjectTeacherGroupRepository: JpaRepository<SubjectTeacher, Long> {
+
     fun findAllByGroupName(groupName: String): List<SubjectTeacher>
 }

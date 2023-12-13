@@ -1,6 +1,3 @@
-server:
-  port: 8900
-
 bot:
   name: Deadline Bot
   token: 6761629168:AAHOyhJ2IdSuM2yA7kn6POzJ9clByVMl1M8

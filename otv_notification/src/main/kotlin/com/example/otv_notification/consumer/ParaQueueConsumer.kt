@@ -44,7 +44,7 @@ class ParaQueueConsumer(
             val jsonMessage = JSONObject(message)
 
             val type = (jsonMessage.get("type") ?: throw JSONException("type is null")).toString()
-
+            m.acknowledge()
             if (type == "get") {
                 handleGetType(jsonMessage)
             } else {

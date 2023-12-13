@@ -59,17 +59,35 @@ class ParaServiceImpl(
         subjectTeacherGroup.teacher = teacherEntity
         subjectTeacherGroup.groupName = group
 
-        subjectTeacherGroup = subjectTeacherGroupRepository.save(subjectTeacherGroup)
+
+        val frombd = subjectTeacherGroupRepository.findAll()
+            .filter { it.groupName == group && it.teacher!!.id == teacherEntity.id && it.subject!!.id == subjectEntity.id }
+
+
+        if (frombd.isEmpty()) {
+            subjectTeacherGroup = subjectTeacherGroupRepository.save(subjectTeacherGroup)
+        } else {
+            subjectTeacherGroup = frombd[0]
+        }
+
 
         val newParas = mutableListOf<Para>()
+        val allparas = paraRepository.findAll()
+        val allCreatedParas = mutableListOf<Para>()
         dates.split("\n")
             .map { LocalDateTime.parse(it) }
-            .forEach {
+            .forEach { date ->
                 val para = Para()
-                para.date = it
+                para.date = date
                 para.subjectTeacher = subjectTeacherGroup
-                newParas.add(para)
+
+                if (allparas.none { it.subjectTeacher!!.id == subjectTeacherGroup.id && it.date == date }) {
+                    newParas.add(para)
+                }
+                allCreatedParas.add(para)
             }
-        return paraRepository.saveAll(newParas)
+        paraRepository.saveAll(newParas)
+
+        return allCreatedParas
     }
 }
